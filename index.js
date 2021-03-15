@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 const corsOptions = {
-  origin: "http://localhost:8080",
+  origin: "http://152.228.171.195:8080/",
 };
 
 app.use(cors(corsOptions));
@@ -28,7 +28,7 @@ app.get("/scores", scores);
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:8080",
+    origin: "http://152.228.171.195:8080/",
   },
 });
 
