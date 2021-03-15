@@ -1,7 +1,9 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
-const MongoClient = require("mongodb").MongoClient;
+const dbConnect = require("./db.config");
+const checkPseudo = require("./checkPseudo");
+const scores = require("./scores");
 
 const tirageLettres = require("./tirageLettres");
 const estValide = require("./estValide");
@@ -18,47 +20,11 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-function dbConnect(collection, callback) {
-  MongoClient.connect(
-    "mongodb://localhost:27017",
-    { useUnifiedTopology: true },
-    (err, client) => {
-      const db = client.db("jeumulti").collection(collection);
-      callback(db, client);
-    }
-  );
-}
+// verifie si pseudo déjà existant
+app.post("/check", checkPseudo);
 
-app.post("/check", (req, res, next) => {
-  dbConnect("sockets", async (db, client) => {
-    const dada = await db.find({ pseudo: req.body.pseudo }).count();
-    dada != 0 ? res.send("error") : res.send(req.body.pseudo);
-    client.close();
-  });
-});
-
-app.get("/scores", (req, res, next) => {
-  dbConnect("resultats", async (db, client) => {
-    const reponse = await db
-      .aggregate([
-        {
-          $group: {
-            _id: "$partie",
-            infos: {
-              $addToSet: {
-                $concat: ["$pseudo", " - ", { $toString: "$points" }],
-              },
-            },
-          },
-        },
-        { $sort: { _id: -1 } },
-        { $limit: 50 },
-      ])
-      .toArray();
-    client.close();
-    res.send(reponse);
-  });
-});
+//recupère les scores passés
+app.get("/scores", scores);
 
 const io = require("socket.io")(server, {
   cors: {
@@ -100,7 +66,7 @@ io.on("connection", (socket) => {
                 // on decale l'envoi du tirage à tous les joueurs de 2 secondes
                 setTimeout(() => {
                   io.to("room").emit("s-envoi-tirage", mot);
-                  // on demarre le chrono d'1 min seulement quand le tirage est envoyé
+                  // on demarre le chrono d'1 min quand le tirage est envoyé
                   setTimeout(() => {
                     io.to("room").emit("s-arret-chrono");
                   }, 60000);
@@ -121,8 +87,8 @@ io.on("connection", (socket) => {
             message: "Partie en cours, réessayer de vous connecter plus tard",
           });
         }
-        //client.close();
       });
+      client.close();
     });
   });
 
@@ -178,13 +144,16 @@ io.on("connection", (socket) => {
                   score: `${joueurA.pseudo} - ${joueurA.points} VS ${joueurB.pseudo} - ${joueurB.points}`,
                 });
               }
-            } else return;
-            client.close();
-            // on vide la bdd sockets afin de permettre à d'autre joueurs de jouer
-            dbConnect("sockets", async (db, client) => {
-              await db.remove({});
               client.close();
-            });
+              // on vide la bdd sockets afin de permettre à d'autre joueurs de jouer
+              dbConnect("sockets", async (db, client) => {
+                await db.remove({});
+                client.close();
+              });
+            } else {
+              client.close();
+              return;
+            }
           });
         }
       );
@@ -203,6 +172,7 @@ io.on("connection", (socket) => {
         });
         await db.remove({});
       } else return;
+      client.close();
     });
   });
 
@@ -216,6 +186,7 @@ io.on("connection", (socket) => {
         });
         await db.remove({});
       } else return;
+      client.close();
     });
   });
 });
