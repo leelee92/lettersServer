@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 const corsOptions = {
-  origin: "http://152.228.171.195:8080/",
+  origin: "*",
 };
 
 app.use(cors(corsOptions));
@@ -28,7 +28,7 @@ app.get("/scores", scores);
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://152.228.171.195:8080/",
+    origin: "*",
   },
 });
 
@@ -54,13 +54,11 @@ io.on("connection", (socket) => {
               //  si 2 joueurs sont connectés pour pouvoir lancer une partie
               if (cursor == 2) {
                 const numeroPartie = Date.now();
-                //documents.forEach((document) => {
                 io.to("room").emit(
                   "s-redirige-vers-la-partie",
                   numeroPartie,
                   pseudo
                 );
-                //});
                 const mot = tirageLettres();
                 console.log(mot);
                 // on decale l'envoi du tirage à tous les joueurs de 2 secondes
@@ -88,7 +86,6 @@ io.on("connection", (socket) => {
           });
         }
       });
-      client.close();
     });
   });
 
