@@ -54,11 +54,7 @@ io.on("connection", (socket) => {
               //  si 2 joueurs sont connectés pour pouvoir lancer une partie
               if (cursor == 2) {
                 const numeroPartie = Date.now();
-                io.to("room").emit(
-                  "s-redirige-vers-la-partie",
-                  numeroPartie,
-                  pseudo
-                );
+                io.to("room").emit("s-redirige-vers-la-partie", numeroPartie);
                 const mot = tirageLettres();
                 console.log(mot);
                 // on decale l'envoi du tirage à tous les joueurs de 2 secondes
